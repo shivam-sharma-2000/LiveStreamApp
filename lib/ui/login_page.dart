@@ -8,7 +8,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  bool _isSigningIn = false;
 
   @override
   Widget build(BuildContext context) {
