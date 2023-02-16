@@ -25,12 +25,14 @@ class _StreamingPageState extends State<StreamingPage> {
 
   int uid = 0; // uid of the local user
 
+  int activeUserCount = 0;
+
   int? _remoteUid; // uid of the remote user
   bool _isJoined = false; // Indicates if the local user has joined the channel
   bool _isHost = true; // Indicates whether the user has joined as a host or audience
   late RtcEngine agoraEngine; // Agora engine instance
-  bool _isMute = true;
-  bool _isWebcamOff = true;
+  bool _isMute = false;
+  bool _isWebcamOff = false;
 
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey
   = GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
@@ -50,13 +52,18 @@ class _StreamingPageState extends State<StreamingPage> {
     // Register the event handler
     agoraEngine.registerEventHandler(
       RtcEngineEventHandler(
-        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+        onRtcStats: (connection, stats) {
+          setState(() {
+            activeUserCount = stats.userCount!;
+          });
+        },
+        onJoinChannelSuccess: (connection, elapsed) {
           showMessage("Local user uid:${connection.localUid} joined the channel");
           setState(() {
             _isJoined = true;
           });
         },
-        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+        onUserJoined: (connection, remoteUid, elapsed) {
           showMessage("Remote user uid:$remoteUid joined the channel");
           setState(() {
             _remoteUid = remoteUid;
@@ -104,6 +111,9 @@ class _StreamingPageState extends State<StreamingPage> {
     setState(() {
       _isJoined = false;
       _remoteUid = null;
+      _isWebcamOff = false;
+      _isMute = false;
+      activeUserCount = 0;
     });
     agoraEngine.leaveChannel();
   }
@@ -121,8 +131,6 @@ class _StreamingPageState extends State<StreamingPage> {
     ));
   }
 
-
-
   // Build UI
   @override
   Widget build(BuildContext context) {
@@ -135,6 +143,8 @@ class _StreamingPageState extends State<StreamingPage> {
           body: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             children: [
+              // Active Users
+              Text("$activeUserCount Active Users"),
               // Container for the local video
               Container(
                 height: 240,
@@ -161,7 +171,7 @@ class _StreamingPageState extends State<StreamingPage> {
                 children: <Widget>[
                   Expanded(
                     child: Visibility(
-                      visible: _isJoined,
+                      visible: _isJoined && _isHost,
                       child: FloatingActionButton.extended(
                         icon: _isMute ? Icon(Icons.mic_off) : Icon(Icons.mic),
                         onPressed: () => {
@@ -176,7 +186,7 @@ class _StreamingPageState extends State<StreamingPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Visibility(
-                      visible: _isJoined,
+                      visible: _isJoined && _isHost,
                       child: FloatingActionButton.extended(
                         icon: _isWebcamOff ? Icon(Icons.videocam_off) : Icon(Icons.videocam),
                         label: Text(""),
